@@ -1,0 +1,25 @@
+{
+   "currency" : "BRL",
+   "items" : [
+      {
+         "category" : "IT_HARDWARE",
+         "description" : "Monitor 27 polegadas",
+         "quantity" : 2,
+         "sku" : "MON-27",
+         "unitPrice" : 1950
+      }
+   ],
+   "justification" : "Monitores para dois novos analistas de infraestrutura, padrão homologado.",
+   "requestId" : "PR-DEMO-029-FAKE-DOWN",
+   "requester" : {
+      "costCenter" : "CC-4410",
+      "department" : "TI",
+      "employeeId" : "E-1042"
+   },
+   "supplier" : {
+      "name" : "Acme Hardware Ltda",
+      "taxId" : "11222333000181"
+   },
+   "totalAmount" : 3900,
+   "urgency" : "NORMAL"
+}

@@ -1,0 +1,27 @@
+{
+   "currency" : "BRL",
+   "items" : [
+      {
+         "category" : "IT_HARDWARE",
+         "description" : "Monitor 27 polegadas",
+         "quantity" : 4,
+         "sku" : "MON-27",
+         "unitPrice" : 1950
+      }
+   ],
+   "justification" : "Novos analistas contratados para o time de infraestrutura precisam de segundo monitor, padrão homologado.",
+   "neededBy" : "2026-10-30",
+   "requestId" : "PR-DEMO-001",
+   "requester" : {
+      "costCenter" : "CC-4410",
+      "department" : "TI",
+      "employeeId" : "E-1042",
+      "name" : "Ana Souza"
+   },
+   "supplier" : {
+      "name" : "Acme Hardware Ltda",
+      "taxId" : "11.222.333/0001-81"
+   },
+   "totalAmount" : 7800,
+   "urgency" : "NORMAL"
+}

@@ -1,0 +1,48 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["decision", "riskLevel", "riskScore", "confidence", "summary", "reasons", "missingInformation"],
+  "properties": {
+    "decision": {
+      "type": "string",
+      "enum": ["APPROVE", "REJECT", "ESCALATE_TO_HUMAN", "NEEDS_INFO"],
+      "description": "Recomendação final. Sem evidência suficiente: NEEDS_INFO (falta dado do solicitante) ou ESCALATE_TO_HUMAN (julgamento humano)."
+    },
+    "riskLevel": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"] },
+    "riskScore": { "type": "integer", "description": "0 a 100" },
+    "confidence": { "type": "number", "description": "0.0 a 1.0: confiança de que a decisão está correta dado o contexto" },
+    "summary": { "type": "string", "description": "Uma ou duas frases, em português, para o aprovador humano" },
+    "reasons": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "severity", "explanation", "evidenceIds"],
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "WITHIN_POLICY", "AMOUNT_ABOVE_HISTORICAL", "BUDGET_INSUFFICIENT", "BUDGET_TIGHT",
+              "SUPPLIER_BLOCKED", "SUPPLIER_HIGH_RISK", "SUPPLIER_UNKNOWN", "SUPPLIER_NEW",
+              "APPROVAL_LEVEL_REQUIRED", "POLICY_VIOLATION", "SPLIT_PURCHASE_SUSPECTED",
+              "WEAK_JUSTIFICATION", "MISSING_INFORMATION", "DATA_INCONSISTENCY",
+              "SUSPICIOUS_INPUT", "URGENCY_UNJUSTIFIED", "OTHER"
+            ]
+          },
+          "severity": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"] },
+          "explanation": { "type": "string" },
+          "evidenceIds": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "IDs (EV-...) das evidências fornecidas que sustentam esta razão. Nunca invente IDs."
+          }
+        }
+      }
+    },
+    "missingInformation": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Informações que faltam para decidir com segurança (vazio se nada falta)"
+    }
+  }
+}

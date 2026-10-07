@@ -1,0 +1,25 @@
+{
+   "currency" : "BRL",
+   "items" : [
+      {
+         "category" : "IT_HARDWARE",
+         "description" : "Notebook i7 16GB",
+         "quantity" : 10,
+         "sku" : "NB-X1",
+         "unitPrice" : 7800
+      }
+   ],
+   "justification" : "Reposição de notebooks da equipe.",
+   "requestId" : "PR-DEMO-010",
+   "requester" : {
+      "costCenter" : "CC-4410",
+      "department" : "TI",
+      "employeeId" : "E-1042"
+   },
+   "supplier" : {
+      "name" : "Acme Hardware Ltda",
+      "taxId" : "11222333000181"
+   },
+   "totalAmount" : 78000,
+   "urgency" : "NORMAL"
+}

@@ -1,0 +1,25 @@
+{
+   "currency" : "BRL",
+   "items" : [
+      {
+         "category" : "OFFICE_SUPPLIES",
+         "description" : "Materiais de escritório para evento",
+         "quantity" : 1,
+         "sku" : "MAT-EV",
+         "unitPrice" : 4950
+      }
+   ],
+   "justification" : "Complemento de materiais para o evento de clientes de novembro.",
+   "requestId" : "PR-DEMO-012",
+   "requester" : {
+      "costCenter" : "CC-2200",
+      "department" : "Marketing",
+      "employeeId" : "E-2001"
+   },
+   "supplier" : {
+      "name" : "Escritório Total ME",
+      "taxId" : "78124569000156"
+   },
+   "totalAmount" : 4950,
+   "urgency" : "NORMAL"
+}

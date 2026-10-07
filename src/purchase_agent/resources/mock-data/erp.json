@@ -1,0 +1,40 @@
+{
+  "_comment": "Dados 100% sintéticos para o mock de ERP/cadastro. CNPJs gerados com dígito verificador válido, não pertencem a empresas reais.",
+  "costCenters": [
+    { "id": "CC-4410", "name": "Tecnologia - Infraestrutura", "fiscalYear": 2026, "annualBudget": 600000.00, "committed": 410000.00 },
+    { "id": "CC-5500", "name": "Dados e Analytics", "fiscalYear": 2026, "annualBudget": 300000.00, "committed": 120000.00 },
+    { "id": "CC-2200", "name": "Marketing", "fiscalYear": 2026, "annualBudget": 200000.00, "committed": 188000.00 },
+    { "id": "CC-3100", "name": "Facilities", "fiscalYear": 2026, "annualBudget": 450000.00, "committed": 150000.00 },
+    { "id": "CC-9000", "name": "Diretoria Executiva", "fiscalYear": 2026, "annualBudget": 3000000.00, "committed": 500000.00 }
+  ],
+  "suppliers": [
+    { "taxId": "11222333000181", "name": "Acme Hardware Ltda", "status": "ACTIVE", "riskRating": "LOW", "registeredSince": "2019-03-11", "categories": ["IT_HARDWARE"], "notes": "Fornecedor homologado, SLA de entrega cumprido em 98% dos pedidos." },
+    { "taxId": "45231876000187", "name": "Nuvem Software SA", "status": "ACTIVE", "riskRating": "LOW", "registeredSince": "2021-06-02", "categories": ["SOFTWARE", "SAAS"], "notes": "Contrato-quadro vigente até 2027-12." },
+    { "taxId": "78124569000156", "name": "Escritório Total ME", "status": "ACTIVE", "riskRating": "MEDIUM", "registeredSince": "2023-01-20", "categories": ["OFFICE_SUPPLIES", "FURNITURE"], "notes": "Dois atrasos de entrega registrados em 2026." },
+    { "taxId": "33445566000186", "name": "Fantasma Comércio Ltda", "status": "BLOCKED", "riskRating": "CRITICAL", "registeredSince": "2020-08-15", "categories": ["IT_HARDWARE", "OFFICE_SUPPLIES"], "notes": "Bloqueado: certidão negativa de débitos vencida e registro em cadastro de empresas sancionadas." },
+    { "taxId": "99887755000117", "name": "Rapidez Consultoria Eireli", "status": "ACTIVE", "riskRating": "HIGH", "registeredSince": "2026-09-20", "categories": ["CONSULTING"], "notes": "Cadastro recente. Sócio-administrador com mesmo sobrenome e endereço de funcionário E-2001 (possível conflito de interesses, em apuração)." },
+    { "taxId": "60504030000167", "name": "Brindes & Cia Ltda", "status": "ACTIVE", "riskRating": "LOW", "registeredSince": "2018-11-05", "categories": ["GIFTS"], "notes": "Fornecedor de brindes corporativos." }
+  ],
+  "purchaseHistory": [
+    { "requestId": "PR-2025-0901", "date": "2025-11-14", "costCenter": "CC-4410", "category": "IT_HARDWARE", "supplierTaxId": "11222333000181", "amount": 23400.00, "status": "APPROVED" },
+    { "requestId": "PR-2025-0977", "date": "2025-12-02", "costCenter": "CC-4410", "category": "IT_HARDWARE", "supplierTaxId": "11222333000181", "amount": 31200.00, "status": "APPROVED" },
+    { "requestId": "PR-2026-0042", "date": "2026-01-22", "costCenter": "CC-4410", "category": "IT_HARDWARE", "supplierTaxId": "11222333000181", "amount": 18700.00, "status": "APPROVED" },
+    { "requestId": "PR-2026-0130", "date": "2026-03-10", "costCenter": "CC-4410", "category": "IT_HARDWARE", "supplierTaxId": "11222333000181", "amount": 27900.00, "status": "APPROVED" },
+    { "requestId": "PR-2026-0211", "date": "2026-05-05", "costCenter": "CC-4410", "category": "IT_HARDWARE", "supplierTaxId": "11222333000181", "amount": 24300.00, "status": "APPROVED" },
+    { "requestId": "PR-2026-0305", "date": "2026-07-18", "costCenter": "CC-4410", "category": "IT_HARDWARE", "supplierTaxId": "11222333000181", "amount": 25100.00, "status": "APPROVED" },
+    { "requestId": "PR-2026-0360", "date": "2026-08-29", "costCenter": "CC-4410", "category": "SOFTWARE", "supplierTaxId": "45231876000187", "amount": 42000.00, "status": "APPROVED" },
+    { "requestId": "PR-2026-0101", "date": "2026-02-15", "costCenter": "CC-5500", "category": "SOFTWARE", "supplierTaxId": "45231876000187", "amount": 38000.00, "status": "APPROVED" },
+    { "requestId": "PR-2026-0199", "date": "2026-04-30", "costCenter": "CC-5500", "category": "SOFTWARE", "supplierTaxId": "45231876000187", "amount": 41500.00, "status": "APPROVED" },
+    { "requestId": "PR-2026-0288", "date": "2026-07-01", "costCenter": "CC-5500", "category": "IT_HARDWARE", "supplierTaxId": "11222333000181", "amount": 15600.00, "status": "APPROVED" },
+    { "requestId": "PR-2026-0012", "date": "2026-01-08", "costCenter": "CC-2200", "category": "OFFICE_SUPPLIES", "supplierTaxId": "78124569000156", "amount": 1800.00, "status": "APPROVED" },
+    { "requestId": "PR-2026-0150", "date": "2026-03-25", "costCenter": "CC-2200", "category": "GIFTS", "supplierTaxId": "60504030000167", "amount": 950.00, "status": "APPROVED" },
+    { "requestId": "PR-2026-0390", "date": "2026-09-28", "costCenter": "CC-2200", "category": "OFFICE_SUPPLIES", "supplierTaxId": "78124569000156", "amount": 4800.00, "status": "APPROVED" },
+    { "requestId": "PR-2026-0398", "date": "2026-10-01", "costCenter": "CC-2200", "category": "OFFICE_SUPPLIES", "supplierTaxId": "78124569000156", "amount": 4900.00, "status": "APPROVED" },
+    { "requestId": "PR-2026-0077", "date": "2026-02-03", "costCenter": "CC-3100", "category": "OFFICE_SUPPLIES", "supplierTaxId": "78124569000156", "amount": 3200.00, "status": "APPROVED" },
+    { "requestId": "PR-2026-0165", "date": "2026-04-08", "costCenter": "CC-3100", "category": "FURNITURE", "supplierTaxId": "78124569000156", "amount": 38500.00, "status": "APPROVED" },
+    { "requestId": "PR-2026-0244", "date": "2026-06-12", "costCenter": "CC-3100", "category": "OFFICE_SUPPLIES", "supplierTaxId": "78124569000156", "amount": 2900.00, "status": "APPROVED" },
+    { "requestId": "PR-2026-0322", "date": "2026-08-04", "costCenter": "CC-3100", "category": "FURNITURE", "supplierTaxId": "78124569000156", "amount": 12400.00, "status": "REJECTED" },
+    { "requestId": "PR-2026-0055", "date": "2026-01-30", "costCenter": "CC-9000", "category": "CONSULTING", "supplierTaxId": "45231876000187", "amount": 180000.00, "status": "APPROVED" },
+    { "requestId": "PR-2026-0270", "date": "2026-06-20", "costCenter": "CC-9000", "category": "CONSULTING", "supplierTaxId": "45231876000187", "amount": 220000.00, "status": "APPROVED" }
+  ]
+}

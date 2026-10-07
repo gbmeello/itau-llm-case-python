@@ -1,0 +1,21 @@
+{
+   "currency" : "BRL",
+   "items" : [
+      {
+         "category" : "FURNITURE",
+         "description" : "Cadeiras ergonômicas",
+         "quantity" : 5,
+         "sku" : "CAD-ERG",
+         "unitPrice" : 1200
+      }
+   ],
+   "justification" : "Cadeiras para colaboradores com recomendação médica de ergonomia.",
+   "requestId" : "PR-DEMO-016",
+   "requester" : {
+      "costCenter" : "CC-3100",
+      "department" : "Facilities",
+      "employeeId" : "E-5120"
+   },
+   "totalAmount" : 6000,
+   "urgency" : "NORMAL"
+}

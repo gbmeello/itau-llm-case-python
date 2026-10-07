@@ -1,0 +1,25 @@
+{
+   "currency" : "BRL",
+   "items" : [
+      {
+         "category" : "IT_HARDWARE",
+         "description" : "Cabos de rede",
+         "quantity" : 100,
+         "sku" : "CBL-01",
+         "unitPrice" : 30
+      }
+   ],
+   "justification" : "Cabos para a reforma do andar 3.",
+   "requestId" : "PR-DEMO-006",
+   "requester" : {
+      "costCenter" : "CC-4410",
+      "department" : "TI",
+      "employeeId" : "E-1042"
+   },
+   "supplier" : {
+      "name" : "Fantasma Comércio Ltda",
+      "taxId" : "33445566000186"
+   },
+   "totalAmount" : 3000,
+   "urgency" : "NORMAL"
+}

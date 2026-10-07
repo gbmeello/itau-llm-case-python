@@ -1,0 +1,9 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["agree", "concerns"],
+  "properties": {
+    "agree": { "type": "boolean", "description": "true se a avaliação do analista é sustentada pelas evidências e pelas políticas" },
+    "concerns": { "type": "array", "items": { "type": "string" }, "description": "Problemas objetivos encontrados (máx. 3), citando IDs de evidência" }
+  }
+}
