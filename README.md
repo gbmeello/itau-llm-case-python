@@ -33,7 +33,7 @@ python -m venv .venv
 source .venv/bin/activate            # Windows: .venv\Scripts\activate
 pip install -e ".[dev]"
 
-pytest                               # 42 testes: unitários + integração (LLM fake, inclusive pipeline via MCP)
+pytest                               # 59 testes: unitários + integração (LLM fake, inclusive pipeline via MCP)
 pytest -m eval                       # golden set (34 casos / 37 turnos) contra o LLM fake
 python -m purchase_agent             # API em http://127.0.0.1:8080 (docs interativas em /docs)
 ./scripts/demo.sh                    # 7 cenários + multi-turno + idempotência + métricas
@@ -54,11 +54,21 @@ LLM_PROVIDER=anthropic pytest -m eval               # golden set contra o modelo
 | `LLM_PROVIDER` | `fake` | `fake` ou `anthropic` |
 | `ANTHROPIC_API_KEY` | — | Obrigatória com `anthropic` |
 | `AGENT_API_KEY` | `dev-key-change-me` | Header `X-API-Key` exigido em `/v1/**` |
+| `RATE_LIMIT_PER_MINUTE` | `60` | Limite por API key nas rotas que consomem LLM (`0` desliga) |
 | `ERP_SOURCE` | `mock` | `mock` (in-process) ou `mcp` (servidor `erp-mcp`) |
+| `AGENT_TOOL_CALLING` | `false` | Analista pode chamar ferramentas de aprofundamento (máx. 3 rodadas) |
 | `MCP_ERP_URL` | `http://127.0.0.1:8001/mcp` | Endpoint Streamable HTTP do servidor MCP |
 | `AGENT_FIXED_DATE` | `2026-10-06` | "Hoje" das regras de negócio (os dados sintéticos são de 2026); `none` = relógio real |
 | `DATABASE_URL` | SQLite em memória | Ex.: `postgresql+psycopg://...` |
 | `LOG_FORMAT` | `json` | `json` ou `text` |
+
+### Com Docker (ambiente completo)
+
+```bash
+docker compose up --build   # PostgreSQL + servidor MCP do ERP + API (ERP via MCP) + Prometheus com alertas
+```
+
+API em http://localhost:8080 e Prometheus em http://localhost:9090 (aba *Alerts*). O CI sobe esse mesmo ambiente e roda a demo de ponta a ponta. Tool calling: `AGENT_TOOL_CALLING=true`.
 
 ## API
 
@@ -102,7 +112,7 @@ flowchart LR
 
 | Verificação | Resultado |
 |---|---|
-| `pytest` | **42 testes ✅** (intake, regras, contexto, validador, resiliência/circuit breaker, MCP, API, casos, skills, métricas, pipeline completo via MCP) |
+| `pytest` | **59 testes ✅** (intake, PII, regras, contexto, validador, resiliência/circuit breaker, rate limit, cliente Anthropic com HTTP simulado, tool calling, MCP, API, casos, skills, métricas, pipeline completo via MCP) |
 | `pytest -m eval` | **37 turnos / 34 casos**: acurácia 100%, schema 100%, grounding 100%, 0 decisões proibidas, adversariais 100% ([relatório](evals/reports/latest-fake.md)); mesmo resultado da versão Java |
 | Demo real | API + servidor MCP em processos separados (`scripts/run-with-mcp.sh`), 7 cenários, multi-turno, idempotência, CRUD de skills |
 | `LLM_PROVIDER=anthropic pytest -m eval` | **Não executado até a entrega** (sem chave de API). O runner está pronto |

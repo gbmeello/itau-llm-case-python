@@ -43,6 +43,27 @@
 | *(Python)* SQLite descarta o fuso horário dos timestamps | Execução real do demo de skills | Normalização para UTC na resposta (`_iso`) |
 | *(Ambos)* Prompt `analyst` v1.0.0 conflitava com o validador de grounding (valores calculados) | Revisão cruzada prompt × validador | `analyst@1.1.0` |
 
+
+## Rodada 3 (07/10): revisão de lacunas e fechamento
+
+A pedido do candidato ("existe algum ponto que está faltando?"), a IA comparou o entregue com o PDF do case e com a própria SPEC e listou 10 lacunas, com prioridade. O candidato pediu que todas fossem resolvidas (exceto reescrever o histórico git, que exige confirmação explícita).
+
+| Lacuna encontrada | O que foi feito | Onde |
+|---|---|---|
+| Spec prometia mascarar PII no texto livre; só o nome era descartado | Mascaramento de CPF, e-mail, telefone e cartão (Luhn) antes do LLM, inclusive nas mensagens de rodada de caso | Java e Python |
+| Spec prometia rate limit; não existia | Token bucket por API key nas rotas que consomem LLM (`429` + `Retry-After`, métrica) | Java e Python |
+| Spec citava docker compose; não havia Docker | Dockerfile (não-root) + compose (PostgreSQL + API + Prometheus; no Python também o servidor MCP), validado no CI de ponta a ponta | Java e Python |
+| Cliente Anthropic real nunca testado | Testes contra HTTP simulado: formato da requisição e mapeamento de erros/recusa, sem chave | Java e Python |
+| Alertas só descritos | `deploy/prometheus/alerts.yml` (9 regras com runbook), validado com `promtool` no CI | Java e Python |
+| Economia do prompt caching afirmada sem verificação | Documentação corrigida: depende do prefixo mínimo do modelo; como verificar e o que fazer se não cachear | Java e Python |
+| Tool calling com retry (diferencial do PDF) ausente | Tool calling opcional do analista: 3 ferramentas somente leitura, máx. 3 rodadas, `is_error`, evidências EV-T* com grounding, via MCP | Python |
+| Texto "_motivo: preencher_" público no AI-USAGE | Reescrito de forma neutra | Java |
+
+**Problemas que a verificação pegou nesta rodada:**
+- A regex de CPF não reconhecia um CPF seguido de ponto final ("…24725."), que acabava mascarado como telefone. O teste falhou e a regex foi corrigida nas duas versões.
+- *(Java)* `@Lob String` no Hibernate 6 + PostgreSQL vira `oid` (large object) e exige transação na leitura. O problema foi identificado antes de rodar em Postgres, e as colunas viraram texto longo portável.
+- A edição em lote de arquivos com CRLF não casava as expressões regulares; as alterações foram refeitas e conferidas uma a uma.
+
 ## Controles aplicados sobre o que a IA produziu
 
 - **Gates por fase:** spec aprovada antes do código; port feito sobre a mesma spec.

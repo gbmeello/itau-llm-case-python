@@ -40,6 +40,8 @@ Schema: [`src/purchase_agent/resources/schemas/purchase-request.v1.json`](src/pu
 | Categoria/urgência despadronizada | Normaliza (`it hardware` → `IT_HARDWARE`, `urgente` → `HIGH`) |
 | Texto com padrão de instrução | `SUSPICIOUS_INPUT` → regra `SEC-INPUT` bloqueia aprovação |
 | Nome do solicitante | **Descartado** no intake (minimização de PII): só IDs seguem no pipeline |
+| CPF, e-mail, telefone, cartão no texto livre | **Mascarados** (`intake/pii.py`) antes do LLM e do contexto (`[CPF]`, `[EMAIL]`…); registra `PII_MASKED:<tipos>`. CNPJ é mantido (dado empresarial) |
+| Excesso de requisições | Rate limit por API key nas rotas que consomem LLM (default 60/min): `429` + `Retry-After` |
 
 ## 4. Contrato de saída: `purchase-decision.v1`
 
@@ -85,6 +87,8 @@ Schema: [`src/purchase_agent/resources/schemas/purchase-decision.v1.json`](src/p
 | Caso `NEEDS_INFO` sem solução após 3 rodadas | `api/service.py` | `ESCALATE_TO_HUMAN` | evento `CASE_ROUNDS_EXHAUSTED` |
 
 ## 7. Ferramentas e contexto
+
+**Tool calling (opcional, `AGENT_TOOL_CALLING=true`):** o analista pode chamar 3 ferramentas somente leitura de aprofundamento: `get_purchase_history_details`, `get_policy_text` e `get_supplier_profile`. Elas são executadas pelo código via `ErpGateway` (logo, via MCP quando ativo). O loop tem no máximo 3 rodadas; depois, `tool_choice: none` força a resposta. Cada chamada tem retry, argumentos inválidos voltam ao modelo como `is_error`, os resultados viram evidências `EV-T*` (sujeitas ao grounding) e há um budget de ~1.000 tokens para resultados de ferramenta. Métrica: `agent_tool_calls_total{tool,outcome}`.
 
 O contexto é **pré-buscado de forma determinística** (`ErpGateway`, somente leitura): orçamento do centro de custo, perfil do fornecedor e histórico de 12 meses. Optamos por não usar tool calling autônomo no MVP: o conjunto de dados necessário é conhecido, e a pré-busca dá latência e custo previsíveis e uma superfície de ataque menor (ver [ADR-0003](docs/adr/0003-contexto-pre-buscado-vs-tool-calling.md)). O ERP pode ser consumido **via MCP** (`ERP_SOURCE=mcp`): o servidor `erp-mcp` expõe as ferramentas e o `McpErpGateway` as chama ([ADR-0006](docs/adr/0006-mcp.md)).
 

@@ -9,11 +9,12 @@
 > 3. O **LLM gera só o julgamento** (`llm-assessment.v1`); o código monta o restante do contrato (§4.2).
 > 4. Os fatos do ERP são buscados **antes** do motor de regras (as regras de orçamento e fornecedor dependem deles); o diagrama da §3 foi simplificado.
 > 5. Histórico sumarizado **em código** (estatísticas + top-5), não pelo Haiku: determinístico e sem custo. O Haiku fica com a sumarização do caso multi-turno.
-> 6. Tool calling do analista (§5.3) **não implementado**: o contexto é pré-buscado (ADR-0003).
+> 6. Tool calling do analista (§5.3): **opcional** (`AGENT_TOOL_CALLING=true`, implementado na versão Python); o caminho padrão continua sendo a pré-busca (ADR-0003).
 > 7. MCP (§9) **implementado nesta versão Python**: servidor `erp-mcp` + `McpErpGateway` (ADR-0006). Na versão Java ficou só a interface.
 > 8. Pacote único `purchase_agent` com o servidor MCP como subpacote.
 > 9. Traces via `traceId` (header/contextvar/auditoria); OpenTelemetry fica como evolução.
 > 10. **Stack Python** (FastAPI, Pydantic, SDK anthropic 1.x) em vez de Java/Spring: ver ADR-0008. O SDK 1.x removeu `temperature`, alinhado à decisão 1.
+> 11. Lacunas da spec fechadas depois da revisão de 07/10: mascaramento de PII no texto livre (§12), rate limit por cliente (§12), Docker/compose com PostgreSQL + MCP + Prometheus e regras de alerta executáveis (§11).
 
 ---
 

@@ -7,12 +7,14 @@
 | ERP, orçamento e cadastro **mockados** (JSON sintético) | O foco do case é engenharia de IA, não integração | `ErpGateway` sobre APIs reais ou MCP ([ADR-0006](adr/0006-mcp.md)), com cache e timeouts |
 | "Hoje" fixo (`AGENT_FIXED_DATE=2026-10-06`) | Torna reproduzíveis regras temporais (fornecedor novo, fracionamento) e os evals | Relógio real; os evals continuam usando um relógio fixo |
 | Autenticação por API key estática | Demonstra o ponto de controle | OAuth2/mTLS, autorização por papel (solicitante x aprovador x admin de skills) |
-| API síncrona | Latência típica de segundos é aceitável para aprovação | Fila (Kafka/SQS) + workers + callback/webhook para o ERP; backpressure natural sob rate limit |
+| API síncrona (containers prontos: `docker compose up`) | Latência típica de segundos é aceitável para aprovação | Fila (Kafka/SQS) + workers + callback/webhook para o ERP; backpressure natural sob rate limit |
 | SQLite em memória por padrão | Roda sem infraestrutura | `DATABASE_URL` para PostgreSQL + migrações (Alembic) |
 | Políticas filtradas por metadados (categoria e valor) | Há 9 políticas | RAG com busca híbrida (BM25 + embeddings) quando houver centenas de documentos |
 | Traces via `traceId` em contextvar/headers | Já permite correlacionar log, auditoria e resposta | OpenTelemetry com spans por estágio e convenções `gen_ai.*` |
 | Gate "eval antes de ativar skill" é processo | Documentado e com runner pronto | Ativação exige um ID de relatório de eval aprovado; pipeline de promoção (dev → staging → prod) |
 | Detector de injeção por regex | Barato, explica o sinal, gera métrica | Classificador dedicado (ex.: modelo pequeno) como sinal adicional; as defesas estruturais continuam sendo as principais |
+| Rate limit em memória (por instância) | Uma instância na demo | Redis ou o API gateway (limite global por cliente e por custo) |
+| Mascaramento de PII por regex | Cobre CPF, e-mail, telefone e cartão (com Luhn) | Serviço de DLP/NER (nomes próprios, endereços) e mascaramento também no request bruto persistido |
 
 ## 2. Limitações conhecidas
 

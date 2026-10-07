@@ -24,7 +24,7 @@ Cada item vira uma **evidência com ID citável**. É isso que torna o grounding
 |---|---|
 | Histórico bruto linha a linha | Custo cresce com o volume e o sinal é baixo; vira estatística + top-5 |
 | Políticas de outras categorias e abaixo do valor mínimo | Ruído aumenta a chance de o modelo aplicar a regra errada |
-| Nome do solicitante e PII | Minimização (LGPD); o intake descarta. A decisão não depende de quem é a pessoa |
+| Nome do solicitante e PII | Minimização (LGPD): o nome é descartado no intake; CPF, e-mail, telefone e cartão no texto livre são mascarados. A decisão não depende de quem é a pessoa |
 | Campos internos do ERP | Irrelevantes para a decisão |
 | Transcrição de rodadas anteriores | Substituída pelo resumo com teto |
 | Schema JSON no prompt | Já é imposto por `output_config.format`; repeti-lo gastaria tokens |
@@ -62,14 +62,14 @@ Configurável em `ContextBudget` (config.py) ([config.py](../src/purchase_agent/
 |---|---|---|
 | Não chamar o LLM quando a regra decide | `HARD_REJECT` → `RULE_ENGINE` | 0 tokens em rejeições objetivas |
 | Idempotência | Hash canônico do payload → decisão anterior (`X-Idempotent-Replay: true`) | Retry do cliente não paga de novo |
-| Prompt caching | System prompt (regras + exemplos) com `cache_control` | Leitura de cache a ~10% do preço do input |
+| Prompt caching | System prompt (regras + exemplos) com `cache_control` | Leitura de cache a ~10% do preço do input ⚠️ **A verificar com a chave:** o cache só vale acima de um prefixo mínimo, que depende do modelo (512 a 4.096 tokens). O system prompt tem ~1.400 tokens; se ficar abaixo do mínimo do Sonnet 5.5, o cache é ignorado sem erro. Confirmar em `llm_tokens_total{direction="cache_read"}` > 0 no eval real; se for zero, mover as políticas fixas para o system prompt (aumenta o prefixo cacheável) |
 | Modelo certo por tarefa | Sonnet no julgamento; Haiku no compliance e na sumarização | Segunda opinião ~2× mais barata |
 | Compliance seletivo | Só em APPROVE > R$ 10 mil, risco ≥ MEDIUM ou REJECT do modelo | Evita dobrar o custo em casos simples |
 | Contexto enxuto | Histórico sumarizado, políticas filtradas | Entrada típica de ~1,5–3 mil tokens |
 | Visibilidade | `audit.estimatedCostUsd` por decisão; `llm_cost_usd_total` e `agent_decision_cost_usd` em métrica | Custo por decisão como KPI |
 
 **Estimativa de custo por decisão** (preços Sonnet 5.5: US$ 2 / 10 por MTok; Haiku 4.5: US$ 1 / 5):
-- Típica (analista, ~2.500 tokens in, ~300 out, system cacheado): **≈ US$ 0,006–0,009**
+- Típica (analista, ~2.500 tokens in, ~300 out, system cacheado *se* o prefixo atingir o mínimo do modelo): **≈ US$ 0,006–0,009**
 - Com compliance: **+ ≈ US$ 0,004**
 - Pior caso (analista + reparo + compliance, sem cache): **≈ US$ 0,03**
 - 10 mil solicitações/mês ≈ **US$ 60–120/mês** (o valor real deve sair do eval com o modelo real e de produção)

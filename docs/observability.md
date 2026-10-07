@@ -24,6 +24,8 @@
 | `agent_compliance_disagreements_total` | — | Divergência entre analista e auditor |
 | `context_tokens_by_layer`, `context_tokens_by_layer` | layer | Calibração do budget |
 | `context_truncations_total` | — | Contexto cortado (risco de decisão com informação faltante) |
+| `api_rate_limited_total` | route | Consumidor batendo no limite (abuso, loop ou capacidade) |
+| `agent_tool_calls_total` | tool, outcome | Uso de ferramentas pelo analista (tool calling) e taxa de erro |
 
 ## 3. Logs estruturados
 
@@ -35,7 +37,9 @@
 
 `GET /v1/decisions/{decisionId}` devolve a decisão completa, os IDs de contexto incluídos e excluídos, as versões de skills, os tokens, o custo, a latência e o traceId. O `DecisionRecord` é imutável e é gravado em toda decisão, inclusive em fallbacks.
 
-## 5. Alertas (propostos para produção)
+## 5. Alertas
+
+Regras prontas em [`deploy/prometheus/alerts.yml`](../deploy/prometheus/alerts.yml), carregadas pelo Prometheus do `docker-compose` e validadas no CI com `promtool check rules`. Cada alerta tem `severity` e `runbook`.
 
 | Alerta | Condição | Severidade | Ação |
 |---|---|---|---|

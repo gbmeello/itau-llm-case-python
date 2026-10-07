@@ -4,8 +4,11 @@
 
 | Nível | O que cobre | Onde | Roda em |
 |---|---|---|---|
-| **Unitário** | Intake (normalização, CNPJ, PII, injeção), motor de regras (alçadas, bloqueio, orçamento, fracionamento, categoria, ERP fora), context builder (prioridade, teto por camada, corte de exemplos), validador (JSON, schema, IDs, valores R$, guardrails), resiliência (retry só em erro transitório, custo) | `tests/` | `pytest` |
+| **Unitário** | Intake (normalização, CNPJ, PII, injeção), motor de regras (alçadas, bloqueio, orçamento, fracionamento, categoria, ERP fora), context builder (prioridade, teto por camada, corte de exemplos), validador (JSON, schema, IDs, valores R$, guardrails), resiliência (retry só em erro transitório, custo) , PII (CPF/e-mail/telefone/cartão), rate limit (token bucket), tool executor (validação de argumentos e budget)| `tests/` | `pytest` |
 | **Integração** | API ponta a ponta com LLM fake: autenticação, contrato 400, aprovação com auditoria, idempotência, regra sem LLM, fallback por indisponibilidade, multi-turno, CRUD de skills com rastreabilidade, métricas | `tests/test_api.py` | `pytest` |
+| **Cliente LLM real (sem chave)** | `AnthropicLlmClient` contra um transporte HTTP simulado: formato da requisição (structured outputs, `cache_control`, sem `temperature`, tools), mapeamento de 429/529/5xx/400/401 e de `refusal` | `tests/test_anthropic_client.py` | `pytest` |
+| **Tool calling** | Rodada única com evidência EV-T1 citada; loop limitado a 3 rodadas + resposta forçada; erros de ferramenta como `is_error`; ferramentas via MCP | `tests/test_pii_ratelimit_tools.py` | `pytest` |
+| **Containers** | `docker compose up` (PostgreSQL + servidor MCP + API + Prometheus), demo ponta a ponta e `promtool check rules` | CI (`docker-compose-smoke`) | GitHub Actions |
 | **Contrato** | Toda decisão é validada contra `purchase-decision.v1.json` em runtime **e** no eval; a entrada, contra `purchase-request.v1.json` | `contract/schemas.py` | sempre |
 | **Eval: pipeline** | Golden set com LLM fake: guardrails, fallbacks e falhas injetadas (JSON inválido, alucinação, provedor fora, modelo que obedece à injeção, compliance discordando) | `tests/test_golden_set.py` | `pytest -m eval` (CI) |
 | **Eval: modelo** | Mesmo golden set com o Claude real: qualidade de julgamento e aderência ao prompt | `tests/test_golden_set.py` | `LLM_PROVIDER=anthropic pytest -m eval` (manual/nightly, custa tokens) |
