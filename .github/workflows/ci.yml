@@ -1,0 +1,48 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - name: Testes (unitários + integração + MCP, LLM fake)
+        run: pytest
+      - name: Golden set contra LLM fake (gate de pipeline/guardrails)
+        run: pytest -m eval
+      - name: Relatório de eval
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-report
+          path: evals/reports/
+
+  # Eval com o Claude real: manual, para não gastar tokens em todo push. Requer o secret ANTHROPIC_API_KEY.
+  eval-real:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - run: pytest -m eval
+        env:
+          LLM_PROVIDER: anthropic
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
