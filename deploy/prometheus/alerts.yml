@@ -1,0 +1,79 @@
+# Alertas do agente (ver docs/observability.md §5). Validados no CI com `promtool check rules`.
+groups:
+  - name: purchase-approval-agent
+    rules:
+      - alert: AgentHighFallbackRate
+        expr: |
+          sum(rate(agent_fallbacks_total[15m]))
+            / clamp_min(sum(rate(agent_decisions_total[15m])), 1e-9) > 0.05
+        for: 5m
+        labels: {severity: high}
+        annotations:
+          summary: "Mais de 5% das decisões sem LLM utilizável (fallback)"
+          runbook: "Verificar llm_errors_total por tipo e o circuit breaker; aprovadores humanos recebem mais volume."
+
+      - alert: AgentGroundingFailuresAfterRepair
+        expr: sum(increase(agent_grounding_errors_total{stage="repair"}[1h])) > 0
+        labels: {severity: high}
+        annotations:
+          summary: "Saídas do modelo continuam sem grounding após o reparo"
+          runbook: "Possível regressão de prompt ou modelo: congelar ativação de skills e rodar o eval real."
+
+      - alert: AgentApproveBlockedByPolicy
+        expr: |
+          sum(rate(agent_guardrail_events_total{event="APPROVE_BLOCKED_BY_POLICY"}[1h]))
+            / clamp_min(sum(rate(agent_decisions_total[1h])), 1e-9) > 0.01
+        labels: {severity: medium}
+        annotations:
+          summary: "O modelo está tentando aprovar contra regras rígidas (>1% das decisões)"
+          runbook: "Revisar a versão ativa do prompt analyst e os casos recentes na auditoria."
+
+      - alert: AgentDecisionDrift
+        expr: |
+          abs(
+            sum(rate(agent_decisions_total{decision="APPROVE"}[1h])) / clamp_min(sum(rate(agent_decisions_total[1h])), 1e-9)
+            - sum(rate(agent_decisions_total{decision="APPROVE"}[7d])) / clamp_min(sum(rate(agent_decisions_total[7d])), 1e-9)
+          ) > 0.15
+        for: 30m
+        labels: {severity: medium}
+        annotations:
+          summary: "Taxa de APPROVE variou mais de 15 pp em relação à média de 7 dias"
+          runbook: "Mudança de dados, prompt ou modelo? Comparar skillVersions das decisões recentes."
+
+      - alert: AgentLlmCostAboveBudget
+        expr: sum(increase(llm_cost_usd_total[1h])) > 5
+        labels: {severity: medium}
+        annotations:
+          summary: "Custo de LLM acima de US$ 5/h"
+          runbook: "Verificar loops de reparo e tool calling, taxa de cache (llm_tokens_total{direction=\"cache_read\"}) e volume."
+
+      - alert: AgentHighLatency
+        expr: |
+          histogram_quantile(0.95, sum by (le) (rate(agent_decision_latency_seconds_bucket[10m]))) > 15
+        for: 10m
+        labels: {severity: medium}
+        annotations:
+          summary: "p95 da decisão acima de 15 s"
+          runbook: "Provedor lento? Avaliar effort, timeout e tool calling."
+
+      - alert: AgentLlmCircuitOpen
+        expr: sum(increase(llm_errors_total{type="CIRCUIT_OPEN"}[5m])) > 0
+        labels: {severity: high}
+        annotations:
+          summary: "Circuit breaker do LLM aberto"
+          runbook: "Provedor indisponível; decisões estão indo para revisão humana (fail-safe)."
+
+      - alert: AgentComplianceDisagreementHigh
+        expr: sum(increase(agent_compliance_disagreements_total[1d])) > 20
+        labels: {severity: low}
+        annotations:
+          summary: "Compliance discordando com frequência do analista"
+          runbook: "Calibração entre os prompts analyst e compliance-reviewer."
+
+      - alert: AgentRateLimitedSpike
+        expr: sum(rate(api_rate_limited_total[5m])) > 1
+        for: 5m
+        labels: {severity: low}
+        annotations:
+          summary: "Consumidor batendo no rate limit (possível loop ou abuso)"
+          runbook: "Identificar a API key nos logs; avaliar limite por cliente."

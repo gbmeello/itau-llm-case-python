@@ -16,8 +16,9 @@ import uuid
 from dataclasses import dataclass
 
 from purchase_agent import resources
-from purchase_agent.agent import assembler, renderer
+from purchase_agent.agent import assembler, renderer, tools
 from purchase_agent.agent.assembler import UsageTracker
+from purchase_agent.agent.tools import ToolExecutor
 from purchase_agent.agent.validator import DecisionValidator, escalate
 from purchase_agent.config import Settings
 from purchase_agent.context import builder, facts
@@ -94,9 +95,13 @@ class PurchaseApprovalAgent:
             analyst = self._registry.required(sk.ANALYST)
             skill_refs[analyst.skill_id] = analyst.version
             system = renderer.system(analyst.content, {"examples": examples_text if examples_included else ""})
+            executor = ToolExecutor(self._erp, req, cfg, today) if self._s.tool_calling else None
+            if executor:
+                system = f"{system}\n\n{tools.SYSTEM_ADDENDUM}"
             user = renderer.analyst_user(req, ctx)
             try:
-                result = self._analyze(system, user, ctx, usage, skill_refs, events)
+                result, ctx = self._analyze(system, req, ctx, executor, usage, skill_refs, events)
+                user = renderer.analyst_user(req, ctx)  # inclui evidências de ferramenta para o compliance
                 if result is None:
                     fallback_reason = "VALIDATION_FAILED"
                     assessment = assembler.fallback(policy, ctx, "saída do modelo inválida após reparo")
@@ -135,11 +140,19 @@ class PurchaseApprovalAgent:
 
     # ------------------------------------------------------------------ papéis
 
-    def _analyze(self, system: str, user: str, ctx: AgentContext, usage: UsageTracker, skill_refs: dict[str, str],
-                 events: list[str]) -> LlmAssessment | None:
-        """Analista + validação + até N reparos. None se a saída continuar inválida."""
-        r = self._call("analyst", self._s.analyst_model, system, user, self._assessment_schema,
-                       self._s.analyst_max_tokens, self._s.analyst_effort, usage)
+    def _analyze(self, system: str, req: NormalizedRequest, ctx: AgentContext, executor: ToolExecutor | None,
+                 usage: UsageTracker, skill_refs: dict[str, str],
+                 events: list[str]) -> tuple[LlmAssessment | None, AgentContext]:
+        """Analista (com ferramentas, se habilitado) + validação + até N reparos.
+
+        Retorna (avaliação ou None se a saída continuar inválida, contexto acrescido das evidências de ferramenta).
+        """
+        if executor:
+            r, ctx = self._analyst_with_tools(system, renderer.analyst_user(req, ctx), ctx, executor, usage, events)
+        else:
+            r = self._call("analyst", self._s.analyst_model, system, renderer.analyst_user(req, ctx),
+                           self._assessment_schema, self._s.analyst_max_tokens, self._s.analyst_effort, usage)
+        user = renderer.analyst_user(req, ctx)
         parsed = self._validator.parse_and_check(r.text, ctx)
         attempts = 0
         while not parsed.ok and attempts < self._s.max_repair_attempts:
@@ -158,8 +171,40 @@ class PurchaseApprovalAgent:
             self._metrics.validation_failures.labels("repair").inc()
             self._metrics.grounding_errors.labels("repair").inc(len(parsed.repairable_errors))
             log.warning("analyst_output_invalid_final errors=%s", parsed.repairable_errors)
-            return None
-        return parsed.assessment
+            return None, ctx
+        return parsed.assessment, ctx
+
+    def _analyst_with_tools(self, system: str, user: str, ctx: AgentContext, executor: ToolExecutor,
+                            usage: UsageTracker, events: list[str]) -> tuple[LlmResponse, AgentContext]:
+        """Loop de tool calling: no máximo `max_tool_rounds` rodadas; depois, `tool_choice: none` força a resposta.
+
+        Cada chamada passa pelo ResilientLlmClient (retry por rodada). O histórico é append-only (os blocos do
+        assistente voltam intactos, inclusive thinking). Erros de ferramenta voltam ao modelo como `is_error`.
+        """
+        messages: list[dict] = [{"role": "user", "content": user}]
+        rounds = 0
+        while True:
+            forbid = rounds >= self._s.max_tool_rounds
+            r = self._llm.complete(LlmRequest("analyst", self._s.analyst_model, system, user, self._assessment_schema,
+                                              self._s.analyst_max_tokens, self._s.analyst_effort, tools=tools.TOOLS,
+                                              messages=list(messages), forbid_tools=forbid))
+            usage.add(r)
+            if not r.tool_calls or forbid:
+                return r, ctx
+            rounds += 1
+            events.append(f"TOOL_ROUND_{rounds}")
+            messages.append({"role": "assistant", "content": r.assistant_content or []})
+            results = []
+            for call in r.tool_calls:
+                out = executor.execute(call.name, call.input)
+                self._metrics.tool_calls.labels(call.name, "error" if out.is_error else "ok").inc()
+                if out.evidence is not None:
+                    ctx = builder.with_items(ctx, [out.evidence])
+                block = {"type": "tool_result", "tool_use_id": call.id, "content": out.content}
+                if out.is_error:
+                    block["is_error"] = True
+                results.append(block)
+            messages.append({"role": "user", "content": results})
 
     @staticmethod
     def _needs_compliance(a: LlmAssessment, policy: PolicyOutcome, cfg: PolicyConfig, req: NormalizedRequest) -> bool:

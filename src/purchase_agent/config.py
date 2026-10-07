@@ -41,6 +41,9 @@ class Settings:
     llm_timeout_seconds: float = 60.0
     llm_max_attempts: int = 3
     llm_initial_backoff_seconds: float = 0.5
+    rate_limit_per_minute: int = 60  # por cliente, nas rotas que consomem LLM (0 = desligado)
+    tool_calling: bool = False  # analista pode chamar ferramentas de aprofundamento (ADR-0003)
+    max_tool_rounds: int = 3
     # "Hoje" das regras de negócio (dados sintéticos do ERP são de 2026). Auditoria usa o relógio real.
     business_date: date | None = date(2026, 10, 6)
     database_url: str = "sqlite+pysqlite:///:memory:"
@@ -61,6 +64,8 @@ class Settings:
             erp_source=_env("ERP_SOURCE", "mock").lower(),
             mcp_erp_url=_env("MCP_ERP_URL", "http://127.0.0.1:8001/mcp"),
             llm_initial_backoff_seconds=float(_env("LLM_INITIAL_BACKOFF_SECONDS", "0.5")),
+            rate_limit_per_minute=int(_env("RATE_LIMIT_PER_MINUTE", "60")),
+            tool_calling=_env("AGENT_TOOL_CALLING", "false").lower() == "true",
         )
 
     def today(self) -> date:

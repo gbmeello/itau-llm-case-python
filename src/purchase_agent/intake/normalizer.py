@@ -11,7 +11,7 @@ from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 
 from purchase_agent.contract.models import PurchaseRequest
-from purchase_agent.intake import cnpj
+from purchase_agent.intake import cnpj, pii
 from purchase_agent.intake.injection import is_suspicious
 
 MAX_JUSTIFICATION_CHARS = 2000
@@ -76,6 +76,12 @@ def _trim(s: str | None) -> str | None:
 def normalize(req: PurchaseRequest, today: date) -> NormalizedRequest:
     issues: list[str] = []
     missing: list[str] = []
+    pii_found: set[str] = set()
+
+    def masked(text: str | None) -> str | None:
+        out, kinds = pii.mask(text)
+        pii_found.update(kinds)
+        return out
 
     items: list[NormalizedItem] = []
     price_missing = False
@@ -95,7 +101,7 @@ def normalize(req: PurchaseRequest, today: date) -> NormalizedRequest:
             issues.append(f"ITEM_CATEGORY_MISSING:{sku or '?'}")
         else:
             category = category.upper().replace(" ", "_")
-        items.append(NormalizedItem(sku, _trim(it.description), category, qty, price.quantize(_CENT, ROUND_HALF_UP)))
+        items.append(NormalizedItem(sku, masked(_trim(it.description)), category, qty, price.quantize(_CENT, ROUND_HALF_UP)))
     if price_missing:
         missing.append("Preço unitário de todos os itens")
 
@@ -133,7 +139,7 @@ def normalize(req: PurchaseRequest, today: date) -> NormalizedRequest:
             issues.append("SUPPLIER_TAXID_INVALID")
             missing.append("CNPJ válido do fornecedor")
 
-    justification = _trim(req.justification)
+    justification = masked(_trim(req.justification))
     if justification is None:
         issues.append("JUSTIFICATION_MISSING")
         missing.append("Justificativa de negócio da compra")
@@ -144,7 +150,10 @@ def normalize(req: PurchaseRequest, today: date) -> NormalizedRequest:
         if len(justification) < 15:
             issues.append("JUSTIFICATION_TOO_SHORT")
 
-    suspicious = is_suspicious(req.justification) or any(is_suspicious(i.description) for i in items)
+    if pii_found:
+        issues.append("PII_MASKED:" + ",".join(sorted(pii_found)))
+
+    suspicious = is_suspicious(req.justification) or any(is_suspicious(i.description) for i in req.items)
     if suspicious:
         issues.append("SUSPICIOUS_INPUT")
 

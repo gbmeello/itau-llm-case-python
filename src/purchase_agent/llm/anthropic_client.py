@@ -15,7 +15,7 @@ from typing import Any
 
 import anthropic
 
-from purchase_agent.llm.client import LlmError, LlmErrorKind, LlmRequest, LlmResponse
+from purchase_agent.llm.client import LlmError, LlmErrorKind, LlmRequest, LlmResponse, ToolCall
 
 
 class AnthropicLlmClient:
@@ -27,8 +27,12 @@ class AnthropicLlmClient:
             "model": req.model,
             "max_tokens": req.max_tokens,
             "system": [{"type": "text", "text": req.system_prompt, "cache_control": {"type": "ephemeral"}}],
-            "messages": [{"role": "user", "content": req.user_content}],
+            "messages": req.messages or [{"role": "user", "content": req.user_content}],
         }
+        if req.tools:
+            params["tools"] = req.tools
+            if req.forbid_tools:
+                params["tool_choice"] = {"type": "none"}  # força a resposta final; `any`/`tool` são 400 no Sonnet 5.5
         output_config: dict[str, Any] = {}
         if req.output_schema is not None:
             output_config["format"] = {"type": "json_schema", "schema": req.output_schema}
@@ -60,6 +64,7 @@ class AnthropicLlmClient:
         if message.stop_reason == "refusal":
             raise LlmError(LlmErrorKind.REFUSAL, "Modelo recusou a solicitação")
         text = "".join(block.text for block in message.content if block.type == "text")
+        tool_calls = tuple(ToolCall(b.id, b.name, dict(b.input)) for b in message.content if b.type == "tool_use")
         usage = message.usage
         return LlmResponse(
             text=text,
@@ -70,4 +75,7 @@ class AnthropicLlmClient:
             cache_write_tokens=usage.cache_creation_input_tokens or 0,
             latency_ms=latency_ms,
             stop_reason=message.stop_reason or "unknown",
+            tool_calls=tool_calls,
+            # Blocos devolvidos exatamente como vieram (inclusive thinking): o histórico é append-only.
+            assistant_content=[b.model_dump(mode="json", exclude_none=True) for b in message.content],
         )

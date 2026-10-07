@@ -18,6 +18,7 @@ from purchase_agent.context.builder import neutralize
 from purchase_agent.contract import schemas
 from purchase_agent.contract.models import Decision, ErpPayload, PurchaseDecision, PurchaseRequest
 from purchase_agent.db import ApprovalCase, utcnow
+from purchase_agent.intake import pii
 from purchase_agent.llm.client import LlmClient, LlmError, LlmRequest
 from purchase_agent.registry import skills as sk
 from purchase_agent.registry.skills import SkillRegistry
@@ -102,6 +103,7 @@ class EvaluationService:
             raise Conflict("Caso encerrado")
         if message and len(message) > 2000:
             raise ContractViolation(["message: acima de 2000 caracteres"])
+        message = pii.mask(message)[0]  # a mensagem vai para o resumo (LLM) e para o caso persistido
         merged: dict[str, Any] = json.loads(case.request_json)
         if isinstance(updates, dict):
             _merge(merged, copy.deepcopy(updates))

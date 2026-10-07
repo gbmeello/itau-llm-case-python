@@ -219,3 +219,12 @@ def _history_items(req: NormalizedRequest, facts: PurchaseFacts) -> list[Context
             f"fornecedor {p.supplier_tax_id}, status {p.status}",
             {"amount": str(p.amount), "status": p.status}))
     return out
+
+
+def with_items(ctx: AgentContext, items: list[ContextItem]) -> AgentContext:
+    """Acrescenta evidências obtidas por ferramenta (EV-T*). Elas já foram limitadas pelo budget de tool results."""
+    added = sum(estimate_tokens(i.content + str(i.data)) + 12 for i in items)
+    by_layer = dict(ctx.tokens_by_layer)
+    by_layer["TOOL_RESULTS"] = by_layer.get("TOOL_RESULTS", 0) + added
+    return AgentContext((*ctx.included, *items), ctx.excluded_ids, by_layer, ctx.estimated_tokens + added,
+                        ctx.budget_tokens)

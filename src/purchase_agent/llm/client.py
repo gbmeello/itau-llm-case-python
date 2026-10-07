@@ -20,6 +20,18 @@ class LlmRequest:
     output_schema: dict[str, Any] | None  # JSON Schema imposto via structured outputs
     max_tokens: int
     effort: str | None = None
+    # Tool calling (opcional): ferramentas, conversa completa (blocos no formato da Messages API) e `tool_choice: none`
+    # para forçar a resposta final quando o limite de rodadas é atingido.
+    tools: list[dict[str, Any]] | None = None
+    messages: list[dict[str, Any]] | None = None
+    forbid_tools: bool = False
+
+
+@dataclass(frozen=True)
+class ToolCall:
+    id: str
+    name: str
+    input: dict[str, Any]
 
 
 @dataclass(frozen=True)
@@ -32,6 +44,8 @@ class LlmResponse:
     cache_write_tokens: int
     latency_ms: int
     stop_reason: str
+    tool_calls: tuple[ToolCall, ...] = ()
+    assistant_content: list[dict[str, Any]] | None = None  # devolvido intacto na próxima rodada (append-only)
 
 
 class LlmErrorKind(StrEnum):

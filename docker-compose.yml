@@ -1,0 +1,52 @@
+# Ambiente completo: API + servidor MCP do ERP + PostgreSQL + Prometheus (com regras de alerta).
+#   docker compose up --build
+#   API:        http://localhost:8080  (docs em /docs)
+#   Prometheus: http://localhost:9090  (aba Alerts)
+# Para usar o Claude real: ANTHROPIC_API_KEY=... LLM_PROVIDER=anthropic docker compose up --build
+
+services:
+  postgres:
+    image: postgres:17.11-alpine
+    environment:
+      POSTGRES_DB: agent
+      POSTGRES_USER: agent
+      POSTGRES_PASSWORD: agent
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agent -d agent"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  erp-mcp:
+    build: .
+    command: ["python", "-m", "purchase_agent.mcp_server.erp_server", "--host", "0.0.0.0", "--port", "8001"]
+    healthcheck:
+      disable: true
+
+  api:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+      erp-mcp:
+        condition: service_started
+    environment:
+      LLM_PROVIDER: ${LLM_PROVIDER:-fake}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      AGENT_API_KEY: ${AGENT_API_KEY:-dev-key-change-me}
+      DATABASE_URL: postgresql+psycopg://agent:agent@postgres:5432/agent
+      ERP_SOURCE: mcp
+      MCP_ERP_URL: http://erp-mcp:8001/mcp
+      AGENT_TOOL_CALLING: ${AGENT_TOOL_CALLING:-false}
+    ports:
+      - "8080:8080"
+
+  prometheus:
+    image: prom/prometheus:v3.13.4
+    volumes:
+      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./deploy/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - api

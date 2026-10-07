@@ -33,6 +33,9 @@ class Metrics:
         self.context_tokens = Histogram("context_tokens_by_layer", "Tokens estimados por camada", ["layer"],
                                         registry=r, buckets=(50, 100, 200, 400, 800, 1200, 2000, 4000, 8000))
         self.context_truncations = Counter("context_truncations", "Itens de contexto cortados", registry=r)
+        self.rate_limited = Counter("api_rate_limited", "Requisições recusadas por rate limit", ["route"], registry=r)
+        self.tool_calls = Counter("agent_tool_calls", "Chamadas de ferramenta feitas pelo analista", ["tool", "outcome"],
+                                  registry=r)
 
     def render(self) -> bytes:
         return generate_latest(self.registry)

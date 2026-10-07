@@ -18,6 +18,7 @@ from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
 
 from purchase_agent.agent.orchestrator import PurchaseApprovalAgent
+from purchase_agent.api.ratelimit import TokenBucketLimiter
 from purchase_agent.api.service import Conflict, ContractViolation, EvaluationService, NotFound
 from purchase_agent.audit.service import AuditService
 from purchase_agent.config import Settings
@@ -122,6 +123,8 @@ def create_app(settings: Settings | None = None, llm: LlmClient | None = None,
                   description="Agente LLM de aprovação de compras (case Itaú - LLM Engineering)")
     app.state.container = c
     api_key = settings.api_key.encode()
+    limiter = TokenBucketLimiter(settings.rate_limit_per_minute) if settings.rate_limit_per_minute > 0 else None
+    llm_routes = ("/v1/purchase-requests/", "/v1/cases/")
 
     @app.middleware("http")
     async def edge_guard(request: Request, call_next):  # type: ignore[no-untyped-def]
@@ -137,6 +140,12 @@ def create_app(settings: Settings | None = None, llm: LlmClient | None = None,
                     response: Response = _error(401, "UNAUTHORIZED", "X-API-Key ausente ou inválida")
                 elif int(request.headers.get("content-length") or 0) > MAX_BODY_BYTES:
                     response = _error(413, "PAYLOAD_TOO_LARGE", "Payload acima de 64KB")
+                elif (limiter and request.method == "POST" and request.url.path.startswith(llm_routes)
+                      and (wait := limiter.acquire(key.decode())) is not None):
+                    route = "cases" if request.url.path.startswith("/v1/cases/") else "evaluate"
+                    c.metrics.rate_limited.labels(route).inc()
+                    response = _error(429, "RATE_LIMITED", "Limite de requisições excedido; tente novamente mais tarde")
+                    response.headers["Retry-After"] = str(max(1, round(wait)))
                 else:
                     response = await call_next(request)
             else:

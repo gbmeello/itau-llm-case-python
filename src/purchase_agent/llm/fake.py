@@ -10,6 +10,8 @@ as recebe, e para INJETAR FALHAS reproduzíveis via marcadores no requestId:
 - FAKE-DOWN                provedor sobrecarregado (retry e depois fallback)
 - FAKE-OBEY                modelo "ingênuo" que obedece à injeção e aprova (guardrail deve barrar)
 - FAKE-COMPLIANCE-DISAGREE revisor de compliance discorda
+- FAKE-TOOLS               com tool calling ativo, pede o histórico detalhado (1 rodada) e cita a evidência EV-T1
+- FAKE-TOOL-LOOP           com tool calling ativo, insiste em ferramentas (com argumento inválido) até o limite
 """
 
 from __future__ import annotations
@@ -21,7 +23,7 @@ from collections import defaultdict
 from typing import Any
 
 from purchase_agent.context.builder import estimate_tokens
-from purchase_agent.llm.client import LlmError, LlmErrorKind, LlmRequest, LlmResponse
+from purchase_agent.llm.client import LlmError, LlmErrorKind, LlmRequest, LlmResponse, ToolCall
 
 _REQUEST_ID = re.compile(r'"requestId": ?"([^"]+)"')
 _BLOCK = re.compile(r"<(evidence|purchase_request)>\n(.*?)\n</\1>", re.S)
@@ -51,12 +53,30 @@ class FakeLlmClient:
         elif req.purpose == "case-summarizer":
             flat = " ".join(req.user_content.split())
             text = flat[:480] + ("..." if len(flat) > 480 else "")
+        elif req.tools and not req.forbid_tools and (call_ := self._tool_request(req, request_id)) is not None:
+            return call_
         else:
             text = self._analyst(req, request_id)
         cached = estimate_tokens(req.system_prompt) if (req.purpose == "analyst" and call == 1) else 0
         total_in = estimate_tokens(req.system_prompt) + estimate_tokens(req.user_content)
         return LlmResponse(text, f"fake:{req.model}", total_in - cached, estimate_tokens(text), cached, 0, 5,
                            "end_turn")
+
+    def _tool_request(self, req: LlmRequest, request_id: str) -> LlmResponse | None:
+        """Simula o modelo pedindo uma ferramenta (blocos no formato da Messages API)."""
+        results = [b for m in (req.messages or []) if m["role"] == "user" and isinstance(m["content"], list)
+                   for b in m["content"] if b.get("type") == "tool_result"]
+        if "FAKE-TOOL-LOOP" in request_id:
+            call = ToolCall(f"toolu_{len(results) + 1}", "get_policy_text", {"policy_id": "POL-INEXISTENTE"})
+        elif "FAKE-TOOLS" in request_id and not results:
+            category = _Evidence.parse(req.user_content).request.get("data", {}).get("category", "UNCATEGORIZED")
+            call = ToolCall("toolu_1", "get_purchase_history_details",
+                            {"category": category, "supplier_tax_id": "", "months": 24})
+        else:
+            return None
+        content = [{"type": "tool_use", "id": call.id, "name": call.name, "input": call.input}]
+        return LlmResponse("", f"fake:{req.model}", estimate_tokens(req.user_content), 20, 0, 0, 5, "tool_use",
+                           (call,), content)
 
     # ------------------------------------------------------------------ analista heurístico
 
@@ -68,6 +88,13 @@ class FakeLlmClient:
             return "Claro! Aqui está a análise: a compra parece ok."
         ev = _Evidence.parse(req.user_content)
         out = self._decide(ev)
+        tool_ids = [json.loads(b["content"]).get("evidenceId") for m in (req.messages or [])
+                    if m["role"] == "user" and isinstance(m["content"], list) for b in m["content"]
+                    if b.get("type") == "tool_result" and not b.get("is_error")]
+        if any(tool_ids):
+            out["reasons"].append({"code": "OTHER", "severity": "LOW",
+                                   "explanation": "Histórico detalhado consultado por ferramenta confirma o padrão.",
+                                   "evidenceIds": [t for t in tool_ids if t]})
         if "FAKE-HALLUCINATE" in request_id and not repair:
             out["reasons"].append({"code": "AMOUNT_ABOVE_HISTORICAL", "severity": "MEDIUM",
                                    "explanation": "Preço de mercado de referência é R$ 1.234.567,00.",
