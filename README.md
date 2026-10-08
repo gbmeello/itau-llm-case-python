@@ -70,6 +70,10 @@ docker compose up --build   # PostgreSQL + servidor MCP do ERP + API (ERP via MC
 
 API em http://localhost:8080 e Prometheus em http://localhost:9090 (aba *Alerts*). O CI sobe esse mesmo ambiente e roda a demo de ponta a ponta. Tool calling: `AGENT_TOOL_CALLING=true`.
 
+### Com Postman
+
+Importe [`postman/purchase-agent.postman_collection.json`](postman/purchase-agent.postman_collection.json) (24 requisições em 6 pastas, com testes automáticos e a API key configurada) e use **Run collection**. Regerar a partir de `examples/`: `perl scripts/build_postman.pl`.
+
 ## API
 
 | Método | Rota | Descrição |
