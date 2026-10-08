@@ -11,6 +11,10 @@ services:
       POSTGRES_DB: agent
       POSTGRES_USER: agent
       POSTGRES_PASSWORD: agent
+    ports:
+      - "5432:5432"  # acesso local (DBeaver/psql): localhost:5432, db/usuário/senha "agent"
+    volumes:
+      - pgdata:/var/lib/postgresql/data  # dados sobrevivem a "docker compose down" (use "down -v" para zerar)
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U agent -d agent"]
       interval: 5s
@@ -50,3 +54,6 @@ services:
       - "9090:9090"
     depends_on:
       - api
+
+volumes:
+  pgdata:
