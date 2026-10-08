@@ -1,61 +1,77 @@
 # Roteiro da apresentação (30 min + 30 min de discussão)
 
-Formato sugerido: slides curtos baseados nos diagramas de [architecture.md](architecture.md) + **demo ao vivo** (`python -m purchase_agent` + `./scripts/demo.sh`).
+Formato: 19 slides + **demo ao vivo** no ambiente Docker (`docker compose up` e `./scripts/demo.sh` no Git Bash). As seções do deck seguem os quatro pontos de avaliação do PDF.
 
-## 0. Abertura (1 min)
-"Construí um agente de aprovação de compras em que o LLM é um componente de julgamento dentro de um sistema determinístico. A tese: **confiabilidade vem da engenharia em volta do modelo**, não do modelo sozinho."
+| Bloco do PDF | Slides | Tempo |
+|---|---|---|
+| 1. Contexto da solução | 1–5 | 0:00–6:30 |
+| 2. Decisões técnicas e trade-offs | 6–13 | 6:30–17:15 |
+| 3. Qualidade, operação e evolução | 14–15 (com demo) | 17:15–25:00 |
+| 4. Estratégia ampliada | 16–17 | 25:00–27:45 |
+| Uso de IA e encerramento | 18–19 | 27:45–30:00 |
 
-## 1. Contexto da solução (5 min)
-- O problema: aprovar compras exige regras objetivas (alçada, orçamento, fornecedor) e um julgamento cinza (coerência, conflito de interesses, fracionamento).
-- O contrato: entrada `purchase-request.v1` (tolerante) → saída `purchase-decision.v1` (estrita, com `erpPayload`).
-- Diagrama de componentes + máquina de decisão (4 saídas possíveis e quem decide cada uma: `decidedBy`).
+Se o tempo apertar, encurte a demo para 4 minutos (pule DBeaver e skills). Não corte os slides 5, 13 e 16: eles respondem a pontos que o PDF cita pelo nome.
 
-## 2. Decisões técnicas e trade-offs (10 min)
-Uma decisão por slide, sempre com a alternativa rejeitada:
-1. **Regras fora do LLM** ([ADR-0001](adr/0001-llm-como-componente-controlado.md)): fornecedor bloqueado = 0 tokens; o LLM não tem como aprovar contra a regra.
-2. **Structured outputs + validador em código** ([ADR-0002](adr/0002-structured-outputs-e-validacao.md)): mostrar o achado do Sonnet 5.5 sem `tool_choice` forçado.
-3. **Grounding verificável:** evidências com ID, validador recusa ID inexistente e valor R$ inventado → reparo → fallback.
-4. **Engenharia de contexto:** o que entra e o que não entra, camadas P0–P4, budget de 8k ([context-and-tokens.md](context-and-tokens.md)).
-5. **Multi-agente com papéis e modelos certos** ([ADR-0004](adr/0004-multi-agente-e-modelos.md)): Sonnet analisa, código valida, Haiku audita só quando o risco justifica.
-6. **MCP** ([ADR-0006](adr/0006-mcp.md)): o ERP como servidor MCP; ferramentas chamadas pelo código, não pelo modelo.
-7. **Skills versionadas** ([ADR-0005](adr/0005-registry-de-skills.md)): imutáveis, rollback, `skillVersions` em cada decisão.
-8. **Segurança:** prompt injection tratado de forma estrutural (dados delimitados, regras fora do LLM, guardrail) + heurística como sinal; PII descartada no intake.
+## 1. Contexto da solução
 
-## 3. Demo ao vivo (7 min)
-```bash
-./scripts/run-with-mcp.sh     # terminal 1: servidor MCP do ERP + API (ERP via MCP)
-./scripts/demo.sh               # terminal 2
-./scripts/demo-skills.sh
-```
-Roteiro:
-1. `01-approve` → AUTO_APPROVE com evidências citadas.
-2. `02-escalate-above-history` → 3,11× a média sem cotação → humano, alçada 2.
-3. `04-blocked-supplier` → `RULE_ENGINE`, `llmCalls: 0`, custo 0.
-4. `05-prompt-injection` → ESCALATE; mostrar `SEC-INPUT`.
-5. `06-llm-outage` → FALLBACK com contrato válido.
-6. Multi-turno: NEEDS_INFO → complemento → APPROVE.
-7. `GET /v1/decisions/{id}`: o que entrou e o que foi cortado do contexto, versões e custo.
-8. `/metrics`: decisões por `decidedBy`, custo, fallbacks.
-9. Skills: nova versão do analyst → decisão registra `analyst@1.2.0` → rollback.
-10. MCP: mostrar o log do servidor `erp-mcp` recebendo as chamadas de ferramenta (ERP_SOURCE=mcp) e explicar o trade-off (ADR-0006).
+| # | Slide | Tempo | Mensagem |
+|---|---|---|---|
+| 1 | Capa | 1:00 | Cenário 03; tese: o LLM é um componente de julgamento dentro de um sistema determinístico |
+| 2 | O desafio | 1:30 | Entrada imperfeita, contexto do ERP, saída em contrato; 4 decisões possíveis |
+| 3 | A tese | 0:45 | "O LLM julga. O sistema decide o que ele pode decidir." |
+| 4 | Pipeline | 1:45 | 6 estágios, só 2 com LLM; atalho de rejeição por regra sem tokens |
+| 5 | Requisitos → solução | 1:30 | Tabela: 5 requisitos funcionais do PDF + 4 não funcionais, cada um com o mecanismo |
 
-## 4. Qualidade, operação e evolução (5 min)
-- Pirâmide de testes + golden set (34 casos, 8 categorias) + critérios objetivos (schema 100%, grounding 100%, 0 decisões proibidas, adversariais 100%, acurácia ≥ 90%).
-- **Transparência:** o relatório do fake prova o sistema, não o modelo; o eval com o Claude real é o próximo passo ([testing-strategy.md](testing-strategy.md) §5).
-- Observabilidade: métricas e alertas propostos (drift de decisões, grounding, fallbacks, custo).
-- FinOps: ≈ US$ 0,006–0,009 por decisão típica; alavancas (regra sem LLM, cache, Haiku seletivo, idempotência).
-- Evoluções priorizadas ([limitations-and-evolution.md](limitations-and-evolution.md)): eval real, MCP, human-in-the-loop alimentando o golden set, fila assíncrona.
+## 2. Decisões técnicas e trade-offs
 
-## 5. Uso de IA (2 min)
-[AI-USAGE.md](AI-USAGE.md): Claude Code + workflow `agent-skills` com gates (spec aprovada antes do código), o que foi decisão minha (cenário, primeira versão em Java e esta em Python), e os erros que a IA cometeu e que a verificação pegou.
+| # | Slide | Tempo | Decisão · alternativa rejeitada |
+|---|---|---|---|
+| 6 | Quem decide o quê | 1:15 | `decidedBy` em toda resposta · regras no prompt ([ADR-0001](adr/0001-llm-como-componente-controlado.md)) |
+| 7 | Contratos | 1:15 | Structured outputs, o modelo gera só o julgamento · tool use forçado, rejeitado pelo Sonnet 5.5 ([ADR-0002](adr/0002-structured-outputs-e-validacao.md)) |
+| 8 | Grounding | 1:45 | Evidência com ID conferida em código; reparo 1× e fallback |
+| 9 | Contexto e tokens | 1:15 | 8k tokens em camadas P0–P4; o que fica de fora; resumo com teto no multi-turno |
+| 10 | Multi-agente, tool calling e MCP | 1:45 | Papéis com orquestração em código · agente autônomo ([ADR-0003](adr/0003-contexto-pre-buscado-vs-tool-calling.md), [0004](adr/0004-multi-agente-e-modelos.md), [0006](adr/0006-mcp.md)) |
+| 11 | Skills versionadas | 0:45 | Versões imutáveis, rollback, rastreabilidade ([ADR-0005](adr/0005-registry-de-skills.md)) |
+| 12 | Segurança | 1:15 | Injeção tratada na estrutura, PII mascarada, rate limit, fail-safe |
+| 13 | Escalabilidade, resiliência e stack | 1:30 | Stateless, gargalo no provedor; retry, circuit breaker, idempotência; o porquê de cada tecnologia ([ADR-0008](adr/0008-python-vs-java.md)) |
 
-## Perguntas prováveis (e respostas curtas)
+## 3. Qualidade, operação e demo
+
+| # | Slide | Tempo | Mensagem |
+|---|---|---|---|
+| 14 | Qualidade e operação | 1:45 | 34 casos, 59 testes, 9 alertas, ~US$ 0,006 por decisão; gate de regressão; transparência sobre o fake |
+| 15 | Demo ao vivo | 6:00 | `demo.sh` (7 cenários, multi-turno, idempotência) → resposta por dentro → Prometheus (alerta disparando) → DBeaver (`decision_record`) → logs do `erp-mcp` → skills, se sobrar tempo |
+
+## 4. Estratégia ampliada
+
+| # | Slide | Tempo | Mensagem |
+|---|---|---|---|
+| 16 | Como priorizei | 1:30 | Ordem pelo custo de errar: não errar caro → provar → operar → diferenciais; o que cortei; maiores riscos |
+| 17 | Limitações e evolução | 1:15 | Simplificações conscientes; próximos passos em ordem, começando pelo eval com o Claude real |
+
+## Encerramento
+
+| # | Slide | Tempo | Mensagem |
+|---|---|---|---|
+| 18 | Uso de IA | 1:30 | Claude Code com spec aprovada antes do código; decisões humanas; erros da IA que a verificação pegou ([AI-USAGE.md](AI-USAGE.md)) |
+| 19 | Encerramento | 0:45 | Repetir a tese e abrir para perguntas |
+
+## Antes de apresentar
+
+- `docker compose up -d` na pasta do projeto e `./scripts/demo.sh` para popular o banco.
+- Provocar um alerta: duas requisições com `FAKE-INVALID-ALWAYS` no `requestId`.
+- Deixar abertos: slides, Git Bash na pasta do projeto, `docker compose logs -f erp-mcp`, http://localhost:9090/alerts, DBeaver em `localhost:5432` (agent/agent), a collection do Postman e os arquivos `agent/validator.py`, `context/builder.py` e `agent/orchestrator.py`.
+- Plano B se a demo falhar: respostas reais em `examples/responses/` e o relatório em `evals/reports/latest-fake.md`.
+
+## Perguntas prováveis (respostas curtas)
+
 | Pergunta | Resposta |
 |---|---|
-| E se o modelo alucinar uma política? | Políticas só entram como `EV-PT-*`; razão sem evidência existente → reparo → fallback. O motor de regras é a fonte da verdade para regras objetivas. |
-| Por que não deixar o agente chamar tools? | Dados necessários são conhecidos; a pré-busca é mais barata, previsível e segura. Tools seriam a evolução para documentos sob demanda (ADR-0003). |
-| Como garantir consistência sem temperatura 0? | Schema fechado, regras determinísticas, validador, idempotência e eval com critérios; a variação fica restrita à zona cinza. |
-| Como evitar que o contexto cresça em conversas longas? | Resumo incremental com teto, no máximo 3 rodadas, histórico sempre sumarizado e corte por prioridade com registro do que saiu. |
-| Quanto custa? | ~US$ 0,006–0,009 por decisão típica; rejeição por regra custa 0; métrica de custo por decisão em tempo real. |
-| Como mudar um prompt com segurança? | Nova versão de skill → eval fake (CI) + eval real vs. baseline → ativar → monitorar drift → rollback em 1 chamada se necessário. |
-| O que você faria diferente com mais tempo? | Eval real primeiro; MCP; human-in-the-loop alimentando o golden set; OpenTelemetry. |
+| Como a arquitetura atende aos requisitos não funcionais? | Segurança estrutural, retry + circuit breaker + fail-safe, métricas + alertas + auditoria, serviço stateless, regra sem LLM para custo (slide 5). |
+| Como você priorizou? | Pelo custo de errar: não aprovar indevidamente primeiro, depois provar, operar e só então os diferenciais (slide 16). |
+| E se o modelo alucinar uma política? | Políticas só entram como evidência com ID; razão sem evidência existente → reparo → fallback. |
+| Por que não deixar o agente escolher tools livremente? | Dados conhecidos; pré-busca é mais barata, previsível e segura; tools são opcionais para aprofundar. |
+| Consistência sem temperatura 0? | Schema fechado, regras, validador, idempotência e eval. |
+| Onde está o gargalo de escala? | Na cota do provedor de LLM, não no serviço stateless; mitigado com regra antes do LLM, cache, rate limit e fila como evolução. |
+| Quanto custa? | ~US$ 0,006 por decisão típica; zero quando a regra decide. |
+| Maior risco hoje? | Não ter medido o Claude real; e, no negócio, excesso de escalonamentos virar gargalo humano. |
